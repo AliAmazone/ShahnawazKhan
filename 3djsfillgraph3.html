@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+    body {
+        font: 10px sans-serif;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .x.axis path {
+        display: none;
+    }
+
+</style>
+<body>
+<div id = "plotarea">
+</div>
+
+<script src="d3.v4.min.js"></script>
+<script>
+
+    var margin = {top: 20, right: 80, bottom: 30, left: 50},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+    var x = d3.scaleTime()
+            .range([0, width]);
+
+    var y = d3.scaleLinear()
+            .range([height, 0]);
+
+    var color = d3.scaleOrdinal(d3.schemeCategory20c);
+
+    var area = d3.area()
+            .x(function(d) { return x(d.x); })
+            .y0(y(0))
+            .y1(function(d) { return y(d.sequence); });
+
+    var svg = d3.select("#plotarea").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+    var div = d3.select("#plotarea").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+    d3.json("sampleData.json", function(error, data) {
+
+        color.domain(d3.keys(data[0]).filter(function(key) { return key !== "x"; }));
+
+        var variation = color.domain().map(function(name) {
+            return {
+                name: name,
+                values: data.map(function(d) {
+                    return {x: d.x, sequence: +d[name]};
+                })
+            };
+        });
+
+        x.domain(d3.extent(data, function(d) { return d.x; }));
+        y.domain([
+            d3.min(variation, function(c) { return d3.min(c.values, function(v) { return v.sequence; }); }),
+            d3.max(variation, function(c) { return d3.max(c.values, function(v) { return v.sequence; }); })
+        ]);
+
+        var layer = svg.selectAll(".layer")
+                .data(variation)
+                .enter().append("g")
+                .attr("class", "layer");
+
+        layer.append("path")
+                .attr("class", "area")
+                .style("fill", function(d) {
+                    if (d.name === 'started') {
+                        return d3.rgb(44,44,44, 0.2);
+                    }
+                    if (d.name === 'coded') {
+                        return d3.rgb(47,47,47 , 0.6);
+                    }
+                    if (d.name === 'tested') {
+                        return d3.rgb(47,47,47 , 0.6);
+                    }
+                    if (d.name === 'approved') {
+                        return d3.rgb(0,0,0);
+                    }
+                })
+                .attr("d", function(d) {
+                    switch (d.name){
+                        case "started" :
+                        case "coded" :
+                        case "tested" :
+                        case "approved" :
+                        return area(d.values);
+                    }
+                });
+    });
+
+</script>
